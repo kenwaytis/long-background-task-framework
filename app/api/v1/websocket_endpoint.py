@@ -5,14 +5,14 @@ from dependencies import get_task_manager
 router = APIRouter()
 
 @router.websocket("/ws/{task_id}")
-async def websocket_endpoint(websocket: WebSocket, task_id: int, task_manager: TaskManager = Depends(get_task_manager)):
-    await task_manager.connect(websocket, task_id)
+async def websocket_endpoint(websocket: WebSocket, task_id: str, task_manager: TaskManager = Depends(get_task_manager)):
+    await websocket.accept()
     try:
-        task_manager.start_process(task_id)
+        flag = task_manager.start_process(task_id, websocket)
         while True:
-            data = await websocket.receive_text()
-            print(data)
-            if data == "stop":
+            receive_data = await websocket.receive_text()
+            print(receive_data)
+            if receive_data == "stop":
                 task_manager.stop_process(task_id)
                 await websocket.close()
                 break
