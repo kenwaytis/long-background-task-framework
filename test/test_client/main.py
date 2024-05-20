@@ -24,7 +24,7 @@ async def send_command(uri, command, rtsp_url=None):
 device_id = 1
 
 # WebSocket服务器的URL
-uri = f"ws://192.168.100.18:6363/ws/{device_id}"
+uri = f"ws://192.168.100.18:7878/ws/{device_id}"
 
 # 要发送的命令和RTSP URL
 command = "start"

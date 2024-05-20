@@ -11,6 +11,7 @@ async def websocket_endpoint(websocket: WebSocket, task_id: int, task_manager: T
         task_manager.start_process(task_id)
         while True:
             data = await websocket.receive_text()
+            print(data)
             if data == "stop":
                 task_manager.stop_process(task_id)
                 await websocket.close()
