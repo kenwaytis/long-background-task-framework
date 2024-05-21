@@ -9,7 +9,10 @@ router = APIRouter()
 async def websocket_endpoint(websocket: WebSocket, task_id: str, task_manager: TaskManager = Depends(get_task_manager)):
     await websocket.accept()
     try:
-        flag = task_manager.start_process(task_id, websocket)
+        receive_data = await websocket.receive_text()
+        data = json.loads(receive_data)
+        if data.get("action") == "start":
+            task_manager.start_process(websocket, task_id, data.get("data"))
         while True:
             receive_data = await websocket.receive_text()
             try:
@@ -22,4 +25,5 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str, task_manager: T
             except json.JSONDecodeError:
                 print("Received non-JSON message")
     except WebSocketDisconnect:
-        task_manager.disconnect(task_id)
+        task_manager.stop_process(task_id)
+        await websocket.close()

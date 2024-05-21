@@ -1,5 +1,4 @@
-import os
-import signal
+import json
 import asyncio
 import multiprocessing
 
@@ -34,7 +33,8 @@ class TaskManager:
                 task_id = msg['task_id']
                 if task_id in self.active_connections:
                     websocket = self.active_connections[task_id]['websocket']
-                    await websocket.send_text(msg['content'])
+                    content = json.dumps(msg['content'])
+                    await websocket.send_text(content)
             except Exception as e:
                 print(e)
 
@@ -47,11 +47,11 @@ class TaskManager:
             if command['action'] == 'stop':
                 self.stop_process(command['task_id'])
 
-    def start_process(self, task_id, websocket: WebSocket):
+    def start_process(self, websocket: WebSocket, task_id, data):
         if task_id in self.active_connections:
             print(f"{task_id} is already running")
             return False
-        p = multiprocessing.Process(target=long_running_task, args=(task_id, self.msg_queue))
+        p = multiprocessing.Process(target=long_running_task, args=(self.msg_queue, task_id, data))
         p.start()
         self.active_connections[task_id] = {'instance': p, 'websocket': websocket, 'task_info': ''}
         return True
