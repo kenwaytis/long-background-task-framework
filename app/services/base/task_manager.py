@@ -2,13 +2,13 @@ import json
 import asyncio
 import multiprocessing
 
-from fastapi import WebSocket
+from pyee import AsyncIOEventEmitter
 
 from services.business.long_running_task import long_running_task
 
 class TaskManager:
     """
-    self.active_connections: {'{task_id}':{'instance': p, 'task_info': '{info}'}}
+    self.active_connections: {'{task_id}':{'instance': p, 'event_emitter': '{event_emitter}', 'task_info': '{info}'}}
     self.msg_queue: {'{task_id}': {...}}
     self.command_queue: {'action': '', 'task_id': '{task_id}'}
     """
@@ -17,6 +17,7 @@ class TaskManager:
         self.active_connections = {}
         self.msg_queue = multiprocessing.Queue()
         self.command_queue = multiprocessing.Queue()
+        self.event_emitters = {}
 
     async def init_queue(self):
         asyncio.create_task(self.process_msg())
@@ -31,10 +32,9 @@ class TaskManager:
             msg = self.msg_queue.get()
             try:
                 task_id = msg['task_id']
+                content = json.dumps(msg['content'])
                 if task_id in self.active_connections:
-                    websocket = self.active_connections[task_id]['websocket']
-                    content = json.dumps(msg['content'])
-                    await websocket.send_text(content)
+                    self.active_connections[task_id]['event_emitter'].emit('task_message', content)
             except Exception as e:
                 print(e)
 
@@ -47,13 +47,14 @@ class TaskManager:
             if command['action'] == 'stop':
                 self.stop_process(command['task_id'])
 
-    def start_process(self, websocket: WebSocket, task_id, data):
+    def start_process(self, task_id, data):
         if task_id in self.active_connections:
             print(f"{task_id} is already running")
             return False
         p = multiprocessing.Process(target=long_running_task, args=(self.msg_queue, task_id, data))
         p.start()
-        self.active_connections[task_id] = {'instance': p, 'websocket': websocket, 'task_info': ''}
+        event_emitter = AsyncIOEventEmitter()
+        self.active_connections[task_id] = {'instance': p, 'event_emitter': event_emitter, 'task_info': ''}
         return True
     
     def stop_process(self, task_id):
