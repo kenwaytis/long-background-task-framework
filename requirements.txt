@@ -1,0 +1,5 @@
+fastapi[all]
+uvicorn
+websockets
+pyee
+opencv-python
