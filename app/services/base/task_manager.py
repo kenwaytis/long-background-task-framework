@@ -1,3 +1,5 @@
+import os
+import signal
 import asyncio
 import multiprocessing
 
@@ -59,8 +61,9 @@ class TaskManager:
             print(f"{task_id} is not running")
             return False
         p = self.active_connections[task_id]['instance']
-        p.terminate()
+        p.kill()
         p.join()
+        p.close()
         del self.active_connections[task_id]
         return True
         

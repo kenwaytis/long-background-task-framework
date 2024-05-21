@@ -15,10 +15,21 @@ async def send_command(uri, command, rtsp_url=None):
         await websocket.send(json.dumps(data))
         print(f"Sent: {data}")
 
-        # 持续接收服务器的响应
-        while True:
-            response = await websocket.recv()
-            print(f"Received: {response}")
+        async def receive_responses():
+            while True:
+                response = await websocket.recv()
+                print(f"Received: {response}")
+
+        async def send_stop_command():
+            await asyncio.sleep(10)
+            stop_command = {
+                "action": "stop"
+            }
+            await websocket.send(json.dumps(stop_command))
+            print(f"Sent: {stop_command}")
+
+        # 同时启动接收响应和发送停止命令的任务
+        await asyncio.gather(receive_responses(), send_stop_command())
 
 # 设备ID
 device_id = 2
