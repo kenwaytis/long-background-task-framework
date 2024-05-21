@@ -1,44 +1,46 @@
+import socketio
 import asyncio
-import websockets
 import json
 
+# 创建一个Socket.IO客户端实例
+sio = socketio.AsyncClient()
 
-async def send_command(uri, task_id, rtsp_url):
-    async with websockets.connect(uri) as websocket:
-        # 构建要发送的启动命令
-        start_command = {"action": "start", "data": {"rtsp_addr": rtsp_url}}
+# 处理连接事件
+@sio.event
+async def connect():
+    print('Connected to server')
 
-        # 连接成功2秒后发送启动命令
-        await asyncio.sleep(2)
-        await websocket.send(json.dumps(start_command))
-        print(f"Sent: {start_command}")
+    # 加入任务并发送JSON数据
+    join_data = {
+        "task_id": "1",
+        "data": {
+            "rtsp_addr": "rtmp://192.168.100.50/live/livestream1"
+        }
+    }
+    await sio.emit('join', join_data)
+    print('Join event sent:', join_data)
 
-        async def receive_responses():
-            try:
-                while True:
-                    response = await websocket.recv()
-                    print(f"Received: {response}")
-            except websockets.exceptions.ConnectionClosedOK:
-                print("Connection closed normally")
+    # 等待20秒后发送停止命令
+    await asyncio.sleep(20)
+    stop_data = {"task_id": "1", "action": "stop"}
+    await sio.emit('stop', stop_data)
+    print('Stop event sent:', stop_data)
 
-        async def send_stop_command():
-            await asyncio.sleep(20)  # 因为已经等了2秒，所以再等8秒，总共10秒
-            stop_command = {"action": "stop"}
-            await websocket.send(json.dumps(stop_command))
-            print(f"Sent: {stop_command}")
+# 处理断开连接事件
+@sio.event
+async def disconnect():
+    print('Disconnected from server')
 
-        # 同时启动接收响应和发送停止命令的任务
-        await asyncio.gather(receive_responses(), send_stop_command())
+# 处理自定义任务消息事件
+@sio.event
+async def task_message(data):
+    print('Task message received:', data)
 
+# 主函数，连接到服务器并运行事件循环
+async def main():
+    await sio.connect('http://192.168.100.18:7878/sio/')  # 修改为你的服务器地址
+    await sio.wait()
 
-# 任务ID
-task_id = 2
-
-# WebSocket服务器的URL
-uri = f"ws://192.168.100.18:7878/ws/{task_id}"
-
-# RTSP URL
-rtsp_url = "rtmp://192.168.100.50/live/livestream2"
-
-# 启动事件循环并发送命令
-asyncio.get_event_loop().run_until_complete(send_command(uri, task_id, rtsp_url))
+# 运行主函数
+if __name__ == '__main__':
+    asyncio.run(main())
