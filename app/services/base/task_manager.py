@@ -65,3 +65,7 @@ class TaskManager:
         p.close()
         del self.active_connections[task_id]
         return True
+
+    async def shutdown(self):
+        for task_id, connection in self.active_connections.items():
+            self.stop_process(task_id)

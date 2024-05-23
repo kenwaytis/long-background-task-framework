@@ -10,7 +10,7 @@ async def lifespan(app: FastAPI):
     task_manager = get_task_manager()
     await task_manager.init_queue()
     yield
-    task_manager.shutdown()
+    await task_manager.shutdown()
 
 
 app = FastAPI(lifespan=lifespan)
