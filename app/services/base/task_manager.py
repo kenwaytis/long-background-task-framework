@@ -20,10 +20,7 @@ class TaskManager:
     async def process_msg(self):
         async with aiohttp.ClientSession() as session:
             while True:
-                if self.msg_queue.empty():
-                    await asyncio.sleep(0.01)
-                    continue
-                msg = self.msg_queue.get()
+                msg = await asyncio.get_event_loop().run_in_executor(None, self.msg_queue.get)
                 try:
                     task_id = str(msg["task_id"])
                     url = self.active_connections[task_id]["callback_url"]
@@ -37,10 +34,7 @@ class TaskManager:
 
     async def process_command(self):
         while True:
-            if self.command_queue.empty():
-                await asyncio.sleep(0.01)
-                continue
-            command = self.command_queue.get()
+            command = await asyncio.get_event_loop().run_in_executor(None, self.command_queue.get)
             if command["action"] == "stop":
                 self.stop_process(command["task_id"])
 
@@ -62,7 +56,6 @@ class TaskManager:
         p = self.active_connections[task_id]["instance"]
         p.kill()
         p.join()
-        p.close()
         del self.active_connections[task_id]
         return True
 
